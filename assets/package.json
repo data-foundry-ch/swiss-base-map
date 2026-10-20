@@ -1,0 +1,31 @@
+{
+  "name": "swiss-basemap-assets",
+  "version": "0.0.1",
+  "description": "Static Swiss basemap assets: hillshade PMTiles, lakes, rivers, national boundary, and place labels.",
+  "license": "SEE LICENSE IN DATA_NOTICES.md",
+  "type": "module",
+  "files": [
+    "tiles/**",
+    "data/**",
+    "manifest.json",
+    "DATA_NOTICES.md",
+    "README.md"
+  ],
+  "exports": {
+    ".": "./manifest.json",
+    "./manifest.json": "./manifest.json",
+    "./package.json": "./package.json",
+    "./DATA_NOTICES.md": "./DATA_NOTICES.md"
+  },
+  "keywords": [
+    "switzerland",
+    "basemap",
+    "pmtiles",
+    "maplibre",
+    "swisstopo",
+    "gis"
+  ],
+  "scripts": {
+    "pack": "node ../scripts/pack-assets.mjs"
+  }
+}

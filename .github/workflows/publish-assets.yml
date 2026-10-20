@@ -1,0 +1,145 @@
+# Pack swiss-basemap-assets and publish to Cloudflare R2 (+ attach zip to the GitHub Release).
+#
+# Triggers:
+#   - GitHub Release published (preferred)
+#   - Manual "Run workflow"
+#
+# Required repository secrets:
+#   CLOUDFLARE_ACCOUNT_ID
+#   R2_ACCESS_KEY_ID
+#   R2_SECRET_ACCESS_KEY
+#   R2_BUCKET_NAME
+#
+# Optional:
+#   R2_PUBLIC_BASE_URL  e.g. https://assets.example.com
+#                       (logged for consumers; not required for upload)
+
+name: Publish assets to Cloudflare R2
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      update_latest:
+        description: "Also sync to swiss-basemap-assets/latest/"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-assets-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read assets package version
+        id: meta
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./assets/package.json').version")
+          TAG="swiss-basemap-assets-v${VERSION}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "prefix=swiss-basemap-assets/${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Packed version will be ${VERSION}"
+
+      - name: Verify release tag matches package version
+        if: github.event_name == 'release'
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          # Accept v0.0.1 or swiss-basemap-assets-v0.0.1
+          normalized="${RELEASE_TAG#v}"
+          normalized="${normalized#swiss-basemap-assets-v}"
+          if [[ "$normalized" != "$VERSION" ]]; then
+            echo "::error::Release tag '${RELEASE_TAG}' does not match assets/package.json version '${VERSION}'."
+            echo "Bump assets/package.json + assets/manifest.json, then tag v${VERSION}."
+            exit 1
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Pack assets
+        run: npm run pack:assets
+
+      - name: Configure R2 credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          aws-region: auto
+
+      - name: Sync versioned prefix to R2
+        env:
+          AWS_ENDPOINT_URL: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          BUCKET: ${{ secrets.R2_BUCKET_NAME }}
+          PREFIX: ${{ steps.meta.outputs.prefix }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          SRC="release/${TAG}"
+          test -d "$SRC"
+          aws s3 sync "$SRC/" "s3://${BUCKET}/${PREFIX}/" \
+            --endpoint-url "$AWS_ENDPOINT_URL" \
+            --only-show-errors \
+            --cache-control "public, max-age=31536000, immutable"
+          echo "Synced → s3://${BUCKET}/${PREFIX}/"
+
+      - name: Sync latest pointer
+        if: github.event_name == 'workflow_dispatch' && inputs.update_latest
+        env:
+          AWS_ENDPOINT_URL: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          BUCKET: ${{ secrets.R2_BUCKET_NAME }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          set -euo pipefail
+          aws s3 sync "release/${TAG}/" "s3://${BUCKET}/swiss-basemap-assets/latest/" \
+            --endpoint-url "$AWS_ENDPOINT_URL" \
+            --only-show-errors \
+            --delete \
+            --cache-control "public, max-age=300"
+          echo "Synced → s3://${BUCKET}/swiss-basemap-assets/latest/"
+
+      - name: Attach zip to GitHub Release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          ZIP="release/${TAG}.zip"
+          test -f "$ZIP"
+          gh release upload "$RELEASE_TAG" "$ZIP" --clobber
+
+      - name: Consumer URL hint
+        env:
+          BASE: ${{ secrets.R2_PUBLIC_BASE_URL }}
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          if [[ -z "${BASE}" ]]; then
+            echo "Set secret R2_PUBLIC_BASE_URL to print a ready-made VITE_SWISS_ASSETS_BASE in the summary."
+            exit 0
+          fi
+          base="${BASE%/}"
+          {
+            echo "### CDN base for apps"
+            echo ""
+            echo '```'
+            echo "VITE_SWISS_ASSETS_BASE=${base}/swiss-basemap-assets/${VERSION}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

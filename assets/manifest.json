@@ -1,0 +1,45 @@
+{
+  "name": "swiss-basemap-assets",
+  "version": "0.0.1",
+  "description": "Static Swiss basemap assets for MapLibre (and compatible) apps.",
+  "assetsBase": ".",
+  "mapDefaults": {
+    "center": [8.2, 46.8],
+    "zoom": 7,
+    "minZoom": 2,
+    "maxZoom": 12
+  },
+  "layers": {
+    "hillshade": {
+      "path": "tiles/hillshade.pmtiles",
+      "format": "pmtiles",
+      "tileType": "png",
+      "tileSize": 256,
+      "minZoom": 5,
+      "maxZoom": 12,
+      "attribution": "© swisstopo (swissALTIRegio)"
+    },
+    "lakes": {
+      "path": "data/base/lakes.geojson",
+      "format": "geojson",
+      "attribution": "© swisstopo (swissTLM3D standing water)"
+    },
+    "rivers": {
+      "path": "data/base/rivers.geojson",
+      "format": "geojson",
+      "attribution": "© swisstopo (swissTLM3D flowing water)"
+    },
+    "boundary": {
+      "path": "data/base/switzerland_boundary.geojson",
+      "format": "geojson",
+      "attribution": "© swisstopo (swissBOUNDARIES3D)"
+    },
+    "settlements": {
+      "path": "data/base/settlements.geojson",
+      "format": "geojson",
+      "attribution": "© swisstopo (swissNAMES3D)"
+    }
+  },
+  "attribution": "© swisstopo",
+  "basemapNote": "Apps typically pair these assets with a remote vector style (e.g. CARTO Positron). That style is not part of this package — check its commercial terms separately. Thematic product layers (roads, traffic, analysis overlays) belong in the consuming product."
+}

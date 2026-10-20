@@ -1,0 +1,28 @@
+{
+  "name": "swiss-basemap",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Demo app + producer for swiss-basemap-assets (static Swiss basemap package).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "pack:assets": "node scripts/pack-assets.mjs",
+    "new-project": "node scripts/new-project.mjs"
+  },
+  "dependencies": {
+    "maplibre-gl": "^4.7.1",
+    "pmtiles": "^4.5.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/geojson": "^7946.0.14",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "~5.6.3",
+    "vite": "^5.4.11"
+  }
+}

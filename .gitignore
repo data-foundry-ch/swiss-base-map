@@ -1,0 +1,22 @@
+node_modules/
+dist/
+release/
+*.log
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Pipeline scratch output (incl. XYZ hillshade pyramid used to build PMTiles)
+data/intermediate/
+
+# Raw source data is too large for GitHub (incl. the ~144 MB swissTLMRegio
+# zip and ~10 GB swissALTIRegio DEM) — keep it local; processed outputs
+# live in assets/
+data/raw/
