@@ -76,15 +76,14 @@ jobs:
       - name: Pack assets
         run: npm run pack:assets
 
-      - name: Configure R2 credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          aws-region: auto
-
+      # R2 is S3-compatible but not AWS STS. Do not use aws-actions/configure-aws-credentials
+      # with aws-region: auto (resolves sts.auto.amazonaws.com → ENOTFOUND) or with a real
+      # AWS region (GetCallerIdentity fails for R2 API tokens). Pass keys as env vars instead.
       - name: Sync versioned prefix to R2
         env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
           AWS_ENDPOINT_URL: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
           BUCKET: ${{ secrets.R2_BUCKET_NAME }}
           PREFIX: ${{ steps.meta.outputs.prefix }}
@@ -102,6 +101,9 @@ jobs:
       - name: Sync latest pointer
         if: github.event_name == 'workflow_dispatch' && inputs.update_latest
         env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
           AWS_ENDPOINT_URL: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
           BUCKET: ${{ secrets.R2_BUCKET_NAME }}
           TAG: ${{ steps.meta.outputs.tag }}

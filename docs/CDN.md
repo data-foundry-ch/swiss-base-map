@@ -31,6 +31,12 @@ On each **GitHub Release**, it:
 
 Tighten `AllowedOrigins` to your app domains when you can.
 
+The publish workflow talks to R2 with the AWS CLI and static R2 API token env vars
+(`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_DEFAULT_REGION=auto`). It does
+**not** use `aws-actions/configure-aws-credentials` — that action calls AWS STS and
+breaks with `aws-region: auto` (`sts.auto.amazonaws.com` ENOTFOUND) or with R2 tokens
+against a real AWS region.
+
 ## GitHub secrets
 
 Repo → Settings → Secrets and variables → Actions:
